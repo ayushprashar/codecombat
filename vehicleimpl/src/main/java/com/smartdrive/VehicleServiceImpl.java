@@ -1,8 +1,10 @@
 package com.smartdrive;
 
+import akka.NotUsed;
 import com.lightbend.lagom.javadsl.api.ServiceCall;
 import utilities.DBConn;
 
+import javax.inject.Inject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,10 +13,17 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class VehicleServiceImpl implements VehicleService {
+    private final VehicleRepository vehicleRepository;
+
+    @Inject
+    public VehicleServiceImpl(VehicleRepository vehicleRepository) {
+        this.vehicleRepository = vehicleRepository;
+    }
+
     @Override
     public ServiceCall<Vehicle, String> addVehicle() {
         Connection cnn = DBConn.getConnection();
-        String sqlq = "INSERT INTO \"vehicle\" VALUES (?,?,?,?,?,?)";
+        String sqlq = "INSERT INTO \"vehicle\" VALUES (?,?,?,?,?,?,?,?)";
 
         return vehicle -> {
             try {
@@ -26,48 +35,22 @@ public class VehicleServiceImpl implements VehicleService {
                 pstmt.setString(4, vehicle.getVehicleType());
                 pstmt.setString(5, vehicle.getMake());
                 pstmt.setBoolean(6, vehicle.getStatus());
-                pstmt.setString(7,vehicle.getRcnumber());
-                pstmt.setString(8,vehicle.getPucnumber());
+                pstmt.setString(7, vehicle.getRcnumber());
+                pstmt.setString(8, vehicle.getPucnumber());
                 pstmt.executeUpdate();
 
-            }
-            catch (SQLException e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
             return CompletableFuture.completedFuture("Data added");
         };
     }
 
-    public ServiceCall<Integer,Optional<Vehicle>> getVehicle(){
-        Connection cnn = DBConn.getConnection();
-        String sqlq = "select * from vehicle where uid = ?";
-
-        return user ->{
-            try {
-                PreparedStatement preparedStatement;
-                preparedStatement = cnn.prepareStatement(sqlq);
-                preparedStatement.setInt(1,user);
-                ResultSet resultSet = preparedStatement.executeQuery();
-                if(resultSet != null){
-                    return Vehicle.builder()
-                            .uid(resultSet.getInt(1))
-                            .vid(resultSet.getInt(2))
-                            .numberPlate(resultSet.getString(3))
-                            .vehicleType(resultSet.getString(4))
-                            .make(resultSet.getString(5))
-                            .status(resultSet.getBoolean(6))
-                            .rcnumber(resultSet.getString(7))
-                            .pucnumber(resultSet.getString(8))
-                            .build();
-                }
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-
-        };
+    public ServiceCall<NotUsed, Vehicle> getVehicle(int vehicleId) {
+        return notUsed -> vehicleRepository.getVehicle(vehicleId);
 
     }
+
     /**
      * public int getTeacherID(String tname) //needs teacher name in gui
      *     {
